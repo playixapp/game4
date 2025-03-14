@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>بازی XO</title>
+    <!-- اضافه کردن فونت Vazir از طریق CDN -->
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/font-face.css" rel="stylesheet">
+    <style>
+        /* Reset CSS */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Vazir, Arial, sans-serif; /* اعمال فونت Vazir */
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            touch-action: none; /* جلوگیری از زوم با لمس */
+        }
+
+        #game-container {
+            text-align: center;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #game-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: Vazir, Arial, sans-serif; /* اعمال فونت Vazir */
+        }
+
+        .cell:hover {
+            background-color: #ccc;
+        }
+
+        #reset-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            font-family: Vazir, Arial, sans-serif; /* اعمال فونت Vazir */
+        }
+
+        #reset-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* دیالوگ برنده */
+        .win-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+            font-family: Vazir, Arial, sans-serif; /* اعمال فونت Vazir */
+        }
+
+        .win-dialog button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-family: Vazir, Arial, sans-serif; /* اعمال فونت Vazir */
+        }
+
+        .win-dialog button:hover {
+            background-color: #0056b3;
+        }
+
+        /* کادر پایین صفحه */
+        .footer {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-family: Vazir, Arial, sans-serif; /* اعمال فونت Vazir */
+        }
+
+        .footer img {
+            width: 20px; /* اندازه عرض لوگو */
+            height: 20px; /* اندازه ارتفاع لوگو */
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-title">بازی XO</div>
+        <div id="game-board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <button id="reset-button">شروع مجدد</button>
+    </div>
+
+    <!-- دیالوگ برنده -->
+    <div class="win-dialog" id="win-dialog">
+        <div id="win-message"></div>
+        <button id="restart-button">شروع مجدد</button>
+    </div>
+
+    <!-- کادر پایین صفحه -->
+    <div class="footer">
+        <img src="https://s33.picofile.com/file/8483368568/1741771039690.png" alt="لوگو">
+        <span>حقوق محفوظ است</span>
+    </div>
+
+    <script>
+        const cells = document.querySelectorAll('.cell');
+        const resetButton = document.getElementById('reset-button');
+        const winDialog = document.getElementById('win-dialog');
+        const winMessage = document.getElementById('win-message');
+        const restartButton = document.getElementById('restart-button');
+        let currentPlayer = 'X';
+        let board = ['', '', '', '', '', '', '', '', ''];
+        const winningCombinations = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        cells.forEach(cell => {
+            cell.addEventListener('click', handleCellClick);
+        });
+
+        resetButton.addEventListener('click', resetGame);
+        restartButton.addEventListener('click', resetGame);
+
+        function handleCellClick(event) {
+            const cell = event.target;
+            const index = cell.getAttribute('data-index');
+
+            if (board[index] === '') {
+                board[index] = currentPlayer;
+                cell.textContent = currentPlayer;
+                if (checkWin()) {
+                    winMessage.textContent = `هوراا بازیکن ${currentPlayer} بازی را برد!`;
+                    winDialog.style.display = 'block';
+                } else if (board.every(cell => cell !== '')) {
+                    winMessage.textContent = 'مساوی شد!';
+                    winDialog.style.display = 'block';
+                } else {
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                }
+            }
+        }
+
+        function checkWin() {
+            return winningCombinations.some(combination => {
+                return combination.every(index => {
+                    return board[index] === currentPlayer;
+                });
+            });
+        }
+
+        function resetGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            cells.forEach(cell => {
+                cell.textContent = '';
+            });
+            currentPlayer = 'X';
+            winDialog.style.display = 'none';
+        }
+
+        // جلوگیری از زوم با ژست‌های لمسی
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+        });
+
+        // جلوگیری از زوم با کلیدهای Ctrl + Scroll
+        document.addEventListener('wheel', function (e) {
+            if (e.ctrlKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
